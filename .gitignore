@@ -1,0 +1,65 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# --- Secrets & local config (never commit these) ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets.yaml
+*-secret.yaml
+*.secret.yaml
+
+# --- Local data ---
+*.db
+*.sqlite
+*.sqlite3
+data/*.json
+
+# --- Terraform ---
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+*.tfvars
+*.tfvars.json
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+# NOTE: .terraform.lock.hcl SHOULD be committed
+
+# --- Docker / Compose ---
+docker-compose.override.yml
+
+# --- Kubernetes / kind / minikube ---
+kubeconfig
+*.kubeconfig
+
+# --- ML / MLflow / vector store ---
+mlruns/
+mlartifacts/
+*.pkl
+*.joblib
+*.faiss
+models/*.bin
+
+# --- IDE / OS ---
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
