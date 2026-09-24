@@ -11,11 +11,40 @@ A REST service for logging and searching ops incidents, with AI summarization an
 - Deployed to AKS via Terraform, shipped by GitHub Actions, observed with Prometheus/Grafana
 
 ## Quick start
-> Coming with app v0. This section will cover running locally, running tests, and running via Docker Compose.
+Requires Python 3.12+.
+
+```bash
+python -m venv .venv
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+```
+
+Interactive API docs: http://127.0.0.1:8000/docs
+
+```bash
+curl -X POST http://127.0.0.1:8000/incidents \
+  -H 'Content-Type: application/json' \
+  -d '{"title":"AKS node NotReady","severity":"high","symptoms":"Pods Pending after drain"}'
+
+curl http://127.0.0.1:8000/incidents
+curl "http://127.0.0.1:8000/incidents?severity=high"
+curl http://127.0.0.1:8000/incidents/1
+```
+
+| Method | Path | Description |
+|---|---|---|
+| GET | `/health` | Liveness check |
+| POST | `/incidents` | Create an incident (201) |
+| GET | `/incidents` | List incidents, optional `?severity=` filter |
+| GET | `/incidents/{id}` | Fetch one incident (404 if missing) |
+
+> v0 keeps data in memory, so it resets on restart. Persistence arrives on Day 4.
 
 ## Roadmap
 - [x] **P1** Repo, README, licence, project brief
-- [ ] **P1** App v0 with persistence and tests
+- [x] **P1** App v0 (in-memory REST API)
+- [ ] **P1** Persistence (SQLite) and automated tests
 - [ ] **P2** Dockerize (multi-stage), Compose with Postgres, push to GHCR
 - [ ] **P3** Kubernetes: ConfigMap/Secret, probes, HPA, NetworkPolicy, Ingress
 - [ ] **P4** Terraform + AKS with remote state
@@ -27,7 +56,7 @@ A REST service for logging and searching ops incidents, with AI summarization an
 
 ## Repo layout (planned)
 ```
-app/         FastAPI service
+app/         FastAPI service (main, models, store)
 tests/       pytest suite
 docker/      Dockerfile, compose files
 k8s/         Kubernetes manifests
