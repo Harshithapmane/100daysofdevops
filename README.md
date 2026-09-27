@@ -2,7 +2,7 @@
 
 A REST service for logging and searching ops incidents, with AI summarization and ML severity prediction. It's the capstone for my **100 Days of DevOps**: a small app wrapped in a real delivery pipeline (Docker, Kubernetes, Terraform, CI/CD, monitoring, GenAI, MLOps).
 
-> **Status:** early development (Phase 1, Foundations). See the [project brief](docs/PROJECT_BRIEF.md) for architecture and stack.
+> **Status:** early development (Phase 1, Foundations). See the [project brief](docs/PROJECT_BRIEF.md) for architecture and stack, and the [learning guide](docs/LEARNING_GUIDE.md) for a beginner walkthrough of the code.
 
 ## Planned features
 - Create, list and fetch incidents via REST API
@@ -18,6 +18,11 @@ python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 uvicorn app.main:app --reload
+```
+
+Data is now persisted to `data/incidents.db` (SQLite), so it survives a restart. Run the test suite:
+```bash
+pytest -v
 ```
 
 Interactive API docs: http://127.0.0.1:8000/docs
@@ -39,12 +44,10 @@ curl http://127.0.0.1:8000/incidents/1
 | GET | `/incidents` | List incidents, optional `?severity=` filter |
 | GET | `/incidents/{id}` | Fetch one incident (404 if missing) |
 
-> v0 keeps data in memory, so it resets on restart. Persistence arrives on Day 4.
-
 ## Roadmap
 - [x] **P1** Repo, README, licence, project brief
 - [x] **P1** App v0 (in-memory REST API)
-- [ ] **P1** Persistence (SQLite) and automated tests
+- [x] **P1** Persistence (SQLite) and one automated test
 - [ ] **P2** Dockerize (multi-stage), Compose with Postgres, push to GHCR
 - [ ] **P3** Kubernetes: ConfigMap/Secret, probes, HPA, NetworkPolicy, Ingress
 - [ ] **P4** Terraform + AKS with remote state
@@ -62,7 +65,7 @@ docker/      Dockerfile, compose files
 k8s/         Kubernetes manifests
 terraform/   Azure infrastructure
 .github/     CI/CD workflows
-docs/        Project brief, diagrams, incident write-ups
+docs/        Project brief, learning guide, diagrams, incident write-ups
 ```
 
 ## License

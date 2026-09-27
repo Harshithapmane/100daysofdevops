@@ -2,18 +2,18 @@
 from fastapi import Depends, FastAPI, HTTPException, status
 
 from app.models import Incident, IncidentCreate, Severity
-from app.store import InMemoryIncidentStore
+from app.store import SQLiteIncidentStore
 
 app = FastAPI(
     title="Incident Copilot",
-    version="0.1.0",
-    description="Log and search ops incidents. v0: in-memory storage.",
+    version="0.2.0",
+    description="Log and search ops incidents. v1: persisted to SQLite.",
 )
 
-_store = InMemoryIncidentStore()
+_store = SQLiteIncidentStore()
 
 
-def get_store() -> InMemoryIncidentStore:
+def get_store() -> SQLiteIncidentStore:
     return _store
 
 
@@ -25,7 +25,7 @@ def health() -> dict[str, str]:
 
 @app.post("/incidents", response_model=Incident, status_code=status.HTTP_201_CREATED)
 def create_incident(
-    data: IncidentCreate, store: InMemoryIncidentStore = Depends(get_store)
+    data: IncidentCreate, store: SQLiteIncidentStore = Depends(get_store)
 ) -> Incident:
     return store.add(data)
 
@@ -33,7 +33,7 @@ def create_incident(
 @app.get("/incidents", response_model=list[Incident])
 def list_incidents(
     severity: Severity | None = None,
-    store: InMemoryIncidentStore = Depends(get_store),
+    store: SQLiteIncidentStore = Depends(get_store),
 ) -> list[Incident]:
     """List incidents, optionally filtered: /incidents?severity=high"""
     return store.list(severity)
@@ -41,7 +41,7 @@ def list_incidents(
 
 @app.get("/incidents/{incident_id}", response_model=Incident)
 def get_incident(
-    incident_id: int, store: InMemoryIncidentStore = Depends(get_store)
+    incident_id: int, store: SQLiteIncidentStore = Depends(get_store)
 ) -> Incident:
     incident = store.get(incident_id)
     if incident is None:
