@@ -20,10 +20,19 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
-Data is now persisted to `data/incidents.db` (SQLite), so it survives a restart. Run the test suite:
+Data is persisted to `data/incidents.db` (SQLite), so it survives a restart. To run the tests, install the dev requirements too:
 ```bash
+pip install -r requirements-dev.txt
 pytest -v
 ```
+
+### Run with Docker
+```bash
+docker build -t incident-copilot:0.1 .
+docker run -d --name incident-copilot -p 8000:8000 -v incident-data:/app/data incident-copilot:0.1
+curl http://localhost:8000/health
+```
+The `-v incident-data:/app/data` volume keeps the SQLite file when the container is removed. The image is a multi-stage build: dependencies are installed in a builder stage, and only the finished virtual environment and `app/` are copied into the final image.
 
 Interactive API docs: http://127.0.0.1:8000/docs
 
@@ -48,7 +57,8 @@ curl http://127.0.0.1:8000/incidents/1
 - [x] **P1** Repo, README, licence, project brief
 - [x] **P1** App v0 (in-memory REST API)
 - [x] **P1** Persistence (SQLite) and one automated test
-- [ ] **P2** Dockerize (multi-stage), Compose with Postgres, push to GHCR
+- [ ] **P2** Multi-stage Dockerfile (written; build + run verification pending)
+- [ ] **P2** Compose with Postgres, push to GHCR, harden image
 - [ ] **P3** Kubernetes: ConfigMap/Secret, probes, HPA, NetworkPolicy, Ingress
 - [ ] **P4** Terraform + AKS with remote state
 - [ ] **P5** CI/CD with GitHub Actions
@@ -60,8 +70,8 @@ curl http://127.0.0.1:8000/incidents/1
 ## Repo layout (planned)
 ```
 app/         FastAPI service (main, models, store)
+Dockerfile   Multi-stage image build
 tests/       pytest suite
-docker/      Dockerfile, compose files
 k8s/         Kubernetes manifests
 terraform/   Azure infrastructure
 .github/     CI/CD workflows

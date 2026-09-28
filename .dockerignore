@@ -1,0 +1,19 @@
+# Keep the build context small and never bake secrets or local data into an image
+.git
+.gitignore
+.venv
+venv
+__pycache__
+*.pyc
+.pytest_cache
+tests
+docs
+data
+*.db
+*.sqlite
+*.sqlite3
+.env
+.env.*
+Dockerfile
+.dockerignore
+README.md
