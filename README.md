@@ -26,13 +26,28 @@ pip install -r requirements-dev.txt
 pytest -v
 ```
 
-### Run with Docker
+### Run with Docker (single container, SQLite)
 ```bash
 docker build -t incident-copilot:0.1 .
 docker run -d --name incident-copilot -p 8000:8000 -v incident-data:/app/data incident-copilot:0.1
 curl http://localhost:8000/health
 ```
 The `-v incident-data:/app/data` volume keeps the SQLite file when the container is removed. The image is a multi-stage build: dependencies are installed in a builder stage, and only the finished virtual environment and `app/` are copied into the final image.
+
+### Run with Docker Compose (app + real Postgres)
+```bash
+cp .env.example .env     # edit the password before anything real depends on this
+docker compose up --build -d
+docker compose ps
+curl http://localhost:8000/health
+```
+This starts two containers: `db` (Postgres 16) and `app` (this API). The app reads `DATABASE_URL` and talks to Postgres instead of SQLite whenever it's set — see `app/main.py`. `app` waits for `db`'s healthcheck (`pg_isready`) before starting. Data lives in the `pgdata` Docker volume, so `docker compose down` (without `-v`) keeps it.
+
+```bash
+docker compose logs -f app      # watch the app's logs
+docker compose down             # stop (keeps data)
+docker compose down -v          # stop AND delete the Postgres volume
+```
 
 Interactive API docs: http://127.0.0.1:8000/docs
 
@@ -57,8 +72,9 @@ curl http://127.0.0.1:8000/incidents/1
 - [x] **P1** Repo, README, licence, project brief
 - [x] **P1** App v0 (in-memory REST API)
 - [x] **P1** Persistence (SQLite) and one automated test
-- [ ] **P2** Multi-stage Dockerfile (written; build + run verification pending)
-- [ ] **P2** Compose with Postgres, push to GHCR, harden image
+- [ ] **P2** Multi-stage Dockerfile (written; `docker build` on your own machine still pending)
+- [ ] **P2** docker-compose with real Postgres (written; verified against a real Postgres, but not yet via `docker compose` itself)
+- [ ] **P2** Push image to a registry, harden image
 - [ ] **P3** Kubernetes: ConfigMap/Secret, probes, HPA, NetworkPolicy, Ingress
 - [ ] **P4** Terraform + AKS with remote state
 - [ ] **P5** CI/CD with GitHub Actions

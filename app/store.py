@@ -1,8 +1,12 @@
-"""SQLite-backed incident store.
+"""Incident stores.
 
-Same shape as the v0 in-memory store (add/list/get), so main.py barely
-changes. Data now survives an app restart because it lives in a .sqlite3
-file on disk instead of only in RAM.
+Two implementations, same shape (add/list/get), so main.py doesn't care
+which one is in use:
+  - SQLiteIncidentStore: a single local file. Good for running the app
+    directly on a laptop/VM with no extra setup.
+  - PostgresIncidentStore: a real database server. Used when running via
+    docker-compose, where a separate Postgres container is available.
+main.py picks one automatically based on whether DATABASE_URL is set.
 """
 import sqlite3
 from datetime import datetime, timezone
@@ -101,4 +105,94 @@ class SQLiteIncidentStore:
             row = conn.execute(
                 "SELECT * FROM incidents WHERE id = ?", (incident_id,)
             ).fetchone()
+            return self._row_to_incident(row) if row else None
+
+
+class PostgresIncidentStore:
+    """Same interface as SQLiteIncidentStore, backed by a real Postgres server."""
+
+    def __init__(self, dsn: str) -> None:
+        import psycopg  # imported here so psycopg is only required when this store is used
+
+        self._psycopg = psycopg
+        self.dsn = dsn
+        self._init_schema()
+
+    def _connect(self):
+        return self._psycopg.connect(self.dsn)
+
+    def _init_schema(self) -> None:
+        with self._connect() as conn, conn.cursor() as cur:
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS incidents (
+                    id SERIAL PRIMARY KEY,
+                    title TEXT NOT NULL,
+                    severity TEXT NOT NULL,
+                    symptoms TEXT NOT NULL,
+                    root_cause TEXT,
+                    fix TEXT,
+                    status TEXT NOT NULL,
+                    created_at TIMESTAMPTZ NOT NULL
+                )
+                """
+            )
+            conn.commit()
+
+    @staticmethod
+    def _row_to_incident(row) -> Incident:
+        (id_, title, severity, symptoms, root_cause, fix, status_, created_at) = row
+        return Incident(
+            id=id_,
+            title=title,
+            severity=Severity(severity),
+            symptoms=symptoms,
+            root_cause=root_cause,
+            fix=fix,
+            status=Status(status_),
+            created_at=created_at,
+        )
+
+    def add(self, data: IncidentCreate) -> Incident:
+        status_value = Status.resolved if data.fix else Status.open
+        created_at = datetime.now(timezone.utc)
+        with self._connect() as conn, conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO incidents
+                    (title, severity, symptoms, root_cause, fix, status, created_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                RETURNING id
+                """,
+                (
+                    data.title,
+                    data.severity.value,
+                    data.symptoms,
+                    data.root_cause,
+                    data.fix,
+                    status_value.value,
+                    created_at,
+                ),
+            )
+            new_id = cur.fetchone()[0]
+            conn.commit()
+        return Incident(
+            **data.model_dump(), id=new_id, status=status_value, created_at=created_at
+        )
+
+    def list(self, severity: Severity | None = None) -> list[Incident]:
+        with self._connect() as conn, conn.cursor() as cur:
+            if severity is not None:
+                cur.execute(
+                    "SELECT * FROM incidents WHERE severity = %s ORDER BY id",
+                    (severity.value,),
+                )
+            else:
+                cur.execute("SELECT * FROM incidents ORDER BY id")
+            return [self._row_to_incident(r) for r in cur.fetchall()]
+
+    def get(self, incident_id: int) -> Incident | None:
+        with self._connect() as conn, conn.cursor() as cur:
+            cur.execute("SELECT * FROM incidents WHERE id = %s", (incident_id,))
+            row = cur.fetchone()
             return self._row_to_incident(row) if row else None
